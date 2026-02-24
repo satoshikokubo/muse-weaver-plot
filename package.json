@@ -1,0 +1,31 @@
+{
+  "name": "muse-weaver-plot",
+  "version": "1.0.0",
+  "description": "MPC-10 \u2014 10 questions to build the skeleton of your story",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "plot",
+    "writing",
+    "novel"
+  ],
+  "author": "satoshikokubo",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^16.11.6",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "0.17.3",
+    "eslint": "^10.0.1",
+    "obsidian": "latest",
+    "tslib": "2.4.0",
+    "typescript": "5.6",
+    "typescript-eslint": "^8.56.0"
+  }
+}
