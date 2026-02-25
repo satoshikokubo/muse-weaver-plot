@@ -62,6 +62,7 @@ export interface I18nStrings {
 	settingPackInstall: string;
 	settingPackInstallDesc: string;
 	settingOpenFolder: string;
+	settingOpenFolderDesc: string;
 	settingReload: string;
 	settingReloaded: string;
 	reweaveStory: string;
@@ -140,8 +141,9 @@ const ja: I18nStrings = {
 	settingPackB: "\u30b8\u30e3\u30f3\u30eb\u30d1\u30c3\u30af B\uff08\u30c0\u30fc\u30af/\u30c9\u30e9\u30de/\u30ce\u30ef\u30fc\u30eb/BL\u30fbGL\uff09",
 	settingBooth: "\ud83c\udfea Booth",
 	settingPackInstall: "\ud83d\udce6 \u30d1\u30c3\u30af\u306e\u5c0e\u5165",
-	settingPackInstallDesc: "\u8cfc\u5165\u3057\u305fJSON\u30d5\u30a1\u30a4\u30eb\u3092packs\u30d5\u30a9\u30eb\u30c0\u306b\u914d\u7f6e\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
+	settingPackInstallDesc: "\u8cfc\u5165\u3057\u305fJSON\u30d5\u30a1\u30a4\u30eb\u3092 MuseWeaver/PluginSettings/MWPlot/ \u306b\u914d\u7f6e\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
 	settingOpenFolder: "\ud83d\udcc2 \u30d5\u30a9\u30eb\u30c0\u3092\u958b\u304f",
+	settingOpenFolderDesc: "MuseWeaver/PluginSettings/MWPlot/ \u30d5\u30a9\u30eb\u30c0\u304c\u306a\u3044\u5834\u5408\u3001\u81ea\u52d5\u4f5c\u6210\u3055\u308c\u307e\u3059\u3002",
 	settingReload: "\ud83d\udd04 \u518d\u8aad\u307f\u8fbc\u307f",
 	settingReloaded: "\u30d1\u30c3\u30af\u3092\u518d\u8aad\u307f\u8fbc\u307f\u3057\u307e\u3057\u305f",
 };
@@ -213,8 +215,9 @@ const en: I18nStrings = {
 	settingPackB: "Genre Pack B (Dark/Drama/Noir/BL\u30fbGL)",
 	settingBooth: "\ud83c\udfea Booth",
 	settingPackInstall: "\ud83d\udce6 Pack Installation",
-	settingPackInstallDesc: "Place purchased JSON files in the packs folder.",
+	settingPackInstallDesc: "Place purchased JSON files in MuseWeaver/PluginSettings/MWPlot/.",
 	settingOpenFolder: "\ud83d\udcc2 Open Folder",
+	settingOpenFolderDesc: "If MuseWeaver/PluginSettings/MWPlot/ does not exist, it will be created automatically.",
 	settingReload: "\ud83d\udd04 Reload",
 	settingReloaded: "Packs reloaded",
 };

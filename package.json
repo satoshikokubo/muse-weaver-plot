@@ -1,7 +1,7 @@
 {
   "name": "muse-weaver-plot",
-  "version": "1.0.0",
-  "description": "MPC-10 \u2014 10 questions to build the skeleton of your story",
+  "version": "1.0.2",
+  "description": "MPC-10 — 10 questions to build the skeleton of your story",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

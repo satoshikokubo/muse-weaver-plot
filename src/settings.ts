@@ -98,7 +98,7 @@ export class MuseWeaverPlotSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName(t.settingOpenFolder)
-			.setDesc(".obsidian/plugins/muse-weaver-plot/packs/")
+			.setDesc(t.settingOpenFolderDesc)
 			.addButton((btn) =>
 				btn
 					.setButtonText(t.settingOpenFolder)
@@ -109,8 +109,8 @@ export class MuseWeaverPlotSettingTab extends PluginSettingTab {
 							return;
 						}
 						const basePath = adapter.getBasePath();
-						const packsRel = ".obsidian/plugins/muse-weaver-plot/packs";
-						const packsAbs = `${basePath}/${packsRel}`;
+						const packsRel = "MuseWeaver/PluginSettings/MWPlot";
+						const targetPath = `${basePath}/${packsRel}`;
 
 						// Create packs folder if it doesn't exist
 						try {
@@ -118,13 +118,8 @@ export class MuseWeaverPlotSettingTab extends PluginSettingTab {
 								await adapter.mkdir(packsRel);
 							}
 						} catch {
-							// If mkdir fails, we'll try to open the parent instead
+							// ignore
 						}
-
-						// Determine which path to open (packs if exists, plugin root otherwise)
-						const targetPath = (await adapter.exists(packsRel))
-							? packsAbs
-							: `${basePath}/.obsidian/plugins/muse-weaver-plot`;
 
 						const { shell } = (window as any).require("electron").remote
 							|| (window as any).require("@electron/remote")
@@ -145,7 +140,7 @@ export class MuseWeaverPlotSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName(t.settingReload)
-			.setDesc(t.settingPackInstallDesc)
+			.setDesc("")
 			.addButton((btn) =>
 				btn
 					.setButtonText(t.settingReload)

@@ -3,7 +3,8 @@ import type { PackJson, LoadedPack, FlavorOverride, SubQuestion } from "./types"
 import { FLAVORS } from "./data";
 import { lang } from "./i18n";
 
-const PACKS_FOLDER = ".obsidian/plugins/muse-weaver-plot/packs";
+const PACKS_FOLDER = "MuseWeaver/PluginSettings/MWPlot";
+const PACK_PREFIX = "mwp-pack-";
 
 // ============================================================
 // i18n resolution for pack JSON values
@@ -100,7 +101,8 @@ function resetFlavors(): void {
 }
 
 /**
- * Scan packs/ folder, load valid JSONs, unlock matching flavors, merge overrides.
+ * Scan plugin folder for mwp-pack-*.json files, load valid packs,
+ * unlock matching flavors, and merge overrides.
  * Returns list of successfully loaded packs.
  */
 export async function loadPacks(app: App): Promise<LoadedPack[]> {
@@ -113,14 +115,17 @@ export async function loadPacks(app: App): Promise<LoadedPack[]> {
 	const loaded: LoadedPack[] = [];
 	const adapter = app.vault.adapter;
 
-	// Check if packs folder exists
+	// Check if plugin folder exists
 	if (!(await adapter.exists(PACKS_FOLDER))) {
 		return loaded;
 	}
 
-	// List files in packs/
+	// List files in plugin folder, pick only mwp-pack-*.json
 	const listing = await adapter.list(PACKS_FOLDER);
-	const jsonFiles = listing.files.filter((f) => f.endsWith(".json"));
+	const jsonFiles = listing.files.filter((f) => {
+		const fname = f.split("/").pop() ?? "";
+		return fname.startsWith(PACK_PREFIX) && fname.endsWith(".json");
+	});
 
 	for (const filePath of jsonFiles) {
 		try {
