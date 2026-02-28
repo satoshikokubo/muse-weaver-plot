@@ -2,6 +2,13 @@ import { App } from "obsidian";
 
 const BRIDGE_ID = "muse-weaver-ai-bridge";
 
+/** Augmented App type to access internal plugin registry. */
+interface AppWithPlugins extends App {
+	plugins?: {
+		plugins?: Record<string, unknown>;
+	};
+}
+
 interface AiRequest {
 	system: string;
 	message: string;
@@ -46,10 +53,10 @@ const DEFAULT_GUIDE: GuideInfo = {
  * Get the AI Bridge plugin instance, or null if not installed/enabled.
  */
 export function getBridge(app: App): AiBridgePlugin | null {
-	const plugins = (app as any).plugins?.plugins;
+	const plugins = (app as AppWithPlugins).plugins?.plugins;
 	if (!plugins) return null;
 	const bridge = plugins[BRIDGE_ID];
-	if (!bridge || typeof bridge.callAi !== "function") return null;
+	if (!bridge || typeof (bridge as Record<string, unknown>).callAi !== "function") return null;
 	return bridge as AiBridgePlugin;
 }
 

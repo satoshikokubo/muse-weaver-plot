@@ -44,7 +44,7 @@ function resolveOverrides(overrides: Record<string, unknown>): Record<string, Fl
 
 		if (Array.isArray(ov.sub)) {
 			out.sub = (ov.sub as Record<string, unknown>[]).map((s) => ({
-				id: String(s.id ?? ""),
+				id: typeof s.id === "string" ? s.id : "",
 				label: resolveStr((s.label ?? "") as Localizable),
 				placeholder: resolveStr((s.placeholder ?? "") as Localizable),
 			} as SubQuestion));

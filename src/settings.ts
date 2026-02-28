@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting } from "obsidian";
+import { App, FileSystemAdapter, Notice, Platform, PluginSettingTab, Setting } from "obsidian";
 import { DEFAULT_SAVE_FOLDER, PACK_CATALOG } from "./types";
 import type MuseWeaverPlotPlugin from "./main";
 import { FLAVORS } from "./data";
@@ -17,14 +17,14 @@ export class MuseWeaverPlotSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		// Auto-reload packs when settings tab opens
-		this.plugin.reloadPacks().then(() => this.renderContents(containerEl));
+		void this.plugin.reloadPacks().then(() => this.renderContents(containerEl));
 	}
 
 	private renderContents(containerEl: HTMLElement): void {
 		containerEl.empty();
 
 		// Header
-		containerEl.createEl("h2", { text: t.pluginTitle });
+		new Setting(containerEl).setName(t.pluginTitle).setHeading();
 		containerEl.createEl("p", {
 			text: t.pluginSubtitle,
 			cls: "setting-item-description",
@@ -45,7 +45,7 @@ export class MuseWeaverPlotSettingTab extends PluginSettingTab {
 			);
 
 		// ---- Packs section ----
-		containerEl.createEl("h3", { text: `\u263d ${t.settingGenrePacks}` });
+		new Setting(containerEl).setName(`\u263d ${t.settingGenrePacks}`).setHeading();
 
 		// Built-in (always unlocked)
 		const builtinFlavors = FLAVORS.filter((f) => !f.pack);
@@ -90,7 +90,7 @@ export class MuseWeaverPlotSettingTab extends PluginSettingTab {
 		}
 
 		// Pack install guide
-		containerEl.createEl("h3", { text: t.settingPackInstall });
+		new Setting(containerEl).setName(t.settingPackInstall).setHeading();
 		containerEl.createEl("p", {
 			text: t.settingPackInstallDesc,
 			cls: "setting-item-description",
@@ -102,39 +102,8 @@ export class MuseWeaverPlotSettingTab extends PluginSettingTab {
 			.addButton((btn) =>
 				btn
 					.setButtonText(t.settingOpenFolder)
-					.onClick(async () => {
-						const adapter = this.app.vault.adapter as any;
-						if (!adapter.getBasePath) {
-							new Notice("Could not open folder");
-							return;
-						}
-						const basePath = adapter.getBasePath();
-						const packsRel = "MuseWeaver/PluginSettings/MWPlot";
-						const targetPath = `${basePath}/${packsRel}`;
-
-						// Create packs folder if it doesn't exist
-						try {
-							if (!(await adapter.exists(packsRel))) {
-								await adapter.mkdir(packsRel);
-							}
-						} catch {
-							// ignore
-						}
-
-						const { shell } = (window as any).require("electron").remote
-							|| (window as any).require("@electron/remote")
-							|| {};
-						if (shell?.openPath) {
-							shell.openPath(targetPath);
-						} else {
-							try {
-								(window as any).require("child_process")
-									?.exec(`explorer "${targetPath.replace(/\//g, "\\")}"`)
-								;
-							} catch {
-								new Notice("Could not open folder");
-							}
-						}
+					.onClick(() => {
+						void this.openPacksFolder();
 					})
 			);
 
@@ -144,11 +113,48 @@ export class MuseWeaverPlotSettingTab extends PluginSettingTab {
 			.addButton((btn) =>
 				btn
 					.setButtonText(t.settingReload)
-					.onClick(async () => {
-						await this.plugin.reloadPacks();
-						new Notice(t.settingReloaded);
-						this.renderContents(this.containerEl);
+					.onClick(() => {
+						void this.plugin.reloadPacks().then(() => {
+							new Notice(t.settingReloaded);
+							this.renderContents(this.containerEl);
+						});
 					})
 			);
+	}
+
+	/** Open the packs folder in the system file manager. */
+	private async openPacksFolder(): Promise<void> {
+		const adapter = this.app.vault.adapter;
+		if (!(adapter instanceof FileSystemAdapter)) {
+			new Notice("Could not open folder");
+			return;
+		}
+		const basePath = adapter.getBasePath();
+		const packsRel = "MuseWeaver/PluginSettings/MWPlot";
+		const targetPath = `${basePath}/${packsRel}`;
+
+		// Create packs folder if it doesn't exist
+		try {
+			if (!(await adapter.exists(packsRel))) {
+				await adapter.mkdir(packsRel);
+			}
+		} catch {
+			// ignore
+		}
+
+		// Open folder using Electron or Platform API
+		if (Platform.isDesktopApp) {
+			try {
+				// eslint-disable-next-line @typescript-eslint/no-require-imports
+				const electron = require("electron") as { shell?: { openPath?: (path: string) => Promise<string> } };
+				if (electron.shell?.openPath) {
+					void electron.shell.openPath(targetPath);
+				}
+			} catch {
+				new Notice("Could not open folder");
+			}
+		} else {
+			new Notice("Folder opening is only available on desktop");
+		}
 	}
 }

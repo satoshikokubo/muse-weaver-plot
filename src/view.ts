@@ -21,6 +21,9 @@ import { saveAndOpenPlot, parsePlotMarkdown, plotFileExists } from "./export";
 import { isAiAvailable, callAi, getGuide, getGuidePrompt } from "./ai-bridge";
 import { buildApprovalPrompt, getMuseSystem, buildHintPrompt, getMuseHintSystem, buildDiagnosisPrompt, getMuseDiagnosisSystem } from "./ai-prompts";
 
+/** WeakMap to track dot animation intervals per element. */
+const dotIntervalMap = new WeakMap<HTMLElement, ReturnType<typeof setInterval>>();
+
 export class MuseWeaverPlotView extends ItemView {
 	private plugin: MuseWeaverPlotPlugin;
 	private currentView: ViewMode = "start";
@@ -72,7 +75,8 @@ export class MuseWeaverPlotView extends ItemView {
 		container.addClass("muse-weaver-plot-container");
 		this.contentEl_ = container;
 
-		const data = await this.plugin.loadData() as PluginData | null;
+		const raw: unknown = await this.plugin.loadData();
+		const data = (raw != null && typeof raw === "object") ? raw as PluginData : null;
 		if (data?.session && data.session.status === "in_progress") {
 			this.plotTitle = data.session.plotTitle;
 			this.selectedFlavor = data.session.selectedFlavor;
@@ -92,6 +96,7 @@ export class MuseWeaverPlotView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
+		await Promise.resolve();
 		for (const ref of this.vaultEvents) {
 			this.app.vault.offref(ref);
 		}
@@ -107,7 +112,7 @@ export class MuseWeaverPlotView extends ItemView {
 
 	private debounceSave(): void {
 		if (this.saveTimer) clearTimeout(this.saveTimer);
-		this.saveTimer = setTimeout(() => { this.saveSession(); }, 1000);
+		this.saveTimer = setTimeout(() => { void this.saveSession(); }, 1000);
 	}
 
 	private async saveSession(): Promise<void> {
@@ -126,7 +131,7 @@ export class MuseWeaverPlotView extends ItemView {
 	}
 
 	private async clearSession(): Promise<void> {
-		const empty = {} as PluginData;
+		const empty: PluginData = {};
 		await this.plugin.saveData(empty);
 		this.plugin.cachedData = empty;
 	}
@@ -162,7 +167,7 @@ export class MuseWeaverPlotView extends ItemView {
 		const header = container.createDiv({ cls: "mwp-header-full" });
 		const icon = header.createDiv({ cls: "mwp-brand-icon" });
 		icon.setText("\u263d");
-		header.createEl("h2", { text: t.brandHeading, cls: "mwp-brand-heading" });
+		header.createDiv({ text: t.brandHeading, cls: "mwp-brand-heading" });
 		header.createEl("p", { text: t.brandSubtitle, cls: "mwp-brand-subtitle" });
 		header.createEl("p", { text: t.brandMessage, cls: "mwp-brand-message" });
 	}
@@ -183,7 +188,7 @@ export class MuseWeaverPlotView extends ItemView {
 			cls: "mwp-btn-primary",
 		});
 		btn.addEventListener("click", () => {
-			const data = this.plugin.cachedData as PluginData | null;
+			const data = this.plugin.cachedData;
 			if (data?.session && data.session.status === "in_progress") {
 				this.renderResumePrompt(container, btnArea);
 			} else {
@@ -200,9 +205,9 @@ export class MuseWeaverPlotView extends ItemView {
 			text: t.reweaveDesc,
 			cls: "mwp-start-desc",
 		});
-		reweaveBtn.addEventListener("click", () => this.openPlotSelector());
+		reweaveBtn.addEventListener("click", () => { void this.openPlotSelector(); });
 
-		this.renderPlotList(container);
+		void this.renderPlotList(container);
 	}
 
 	private async openPlotSelector(): Promise<void> {
@@ -264,8 +269,8 @@ export class MuseWeaverPlotView extends ItemView {
 		}
 
 		// Open suggest modal
-		const modal = new PlotSelectModal(this.app, items, async (file) => {
-			await this.loadPlotFromFile(file);
+		const modal = new PlotSelectModal(this.app, items, (file) => {
+			void this.loadPlotFromFile(file);
 		});
 		modal.setPlaceholder(t.reweaveSelect);
 		modal.open();
@@ -297,7 +302,7 @@ export class MuseWeaverPlotView extends ItemView {
 		}
 
 		// Save session and go to Q1
-		this.saveSession();
+		void this.saveSession();
 		this.showView("question");
 	}
 
@@ -316,10 +321,11 @@ export class MuseWeaverPlotView extends ItemView {
 		});
 
 		const noBtn = btns.createEl("button", { text: t.resumeNo, cls: "mwp-btn-secondary mwp-btn-half" });
-		noBtn.addEventListener("click", async () => {
+		noBtn.addEventListener("click", () => {
 			this.resetState();
-			await this.clearSession();
-			this.showView("flavor");
+			void this.clearSession().then(() => {
+				this.showView("flavor");
+			});
 		});
 
 		if (container.firstChild) {
@@ -368,7 +374,7 @@ export class MuseWeaverPlotView extends ItemView {
 			} catch { /* ignore */ }
 
 			item.addEventListener("click", () => {
-				this.app.workspace.openLinkText(file.path, "", false);
+				this.app.workspace.openLinkText(file.path, "", false).catch(() => { /* ignore */ });
 			});
 		}
 	}
@@ -412,7 +418,7 @@ export class MuseWeaverPlotView extends ItemView {
 		const startBtn = nav.createEl("button", { text: t.start, cls: "mwp-btn-primary mwp-btn-flex" });
 		startBtn.addEventListener("click", () => {
 			this.currentStep = 0;
-			this.saveSession();
+			void this.saveSession();
 			this.showView("question");
 		});
 	}
@@ -454,9 +460,9 @@ export class MuseWeaverPlotView extends ItemView {
 				node.addClass("is-clickable");
 				node.addEventListener("click", () => {
 					// Save current answer before jumping
-					this.saveSession();
+					void this.saveSession();
 					this.currentStep = i;
-					this.saveSession();
+					void this.saveSession();
 					this.showView("question");
 				});
 			}
@@ -491,7 +497,7 @@ export class MuseWeaverPlotView extends ItemView {
 					this.answers[q.id].sub[sub.id] = input.value;
 					this.debounceSave();
 				});
-				input.addEventListener("blur", () => { this.saveSession(); });
+				input.addEventListener("blur", () => { void this.saveSession(); });
 			}
 
 			this.renderExpandable(container, t.freeWrite, (content) => {
@@ -507,7 +513,7 @@ export class MuseWeaverPlotView extends ItemView {
 					this.answers[q.id].main = mainTextarea!.value;
 					this.debounceSave();
 				});
-				mainTextarea.addEventListener("blur", () => { this.saveSession(); });
+				mainTextarea.addEventListener("blur", () => { void this.saveSession(); });
 			}, answer.main.trim().length > 0);
 		} else {
 			mainTextarea = container.createEl("textarea", {
@@ -523,7 +529,7 @@ export class MuseWeaverPlotView extends ItemView {
 				this.answers[q.id].main = taRef.value;
 				this.debounceSave();
 			});
-			mainTextarea.addEventListener("blur", () => { this.saveSession(); });
+			mainTextarea.addEventListener("blur", () => { void this.saveSession(); });
 		}
 
 		// Example (flavor-aware, shuffle with ▲▼)
@@ -576,7 +582,7 @@ export class MuseWeaverPlotView extends ItemView {
 			this.cancelApproval();
 			this.saveCurrentAnswer(mainTextarea);
 			if (this.currentStep === 0) { this.showView("flavor"); }
-			else { this.currentStep--; this.saveSession(); this.showView("question"); }
+			else { this.currentStep--; void this.saveSession(); this.showView("question"); }
 		});
 
 		const nextBtn = nav.createEl("button", {
@@ -586,8 +592,8 @@ export class MuseWeaverPlotView extends ItemView {
 		nextBtn.addEventListener("click", () => {
 			this.cancelApproval();
 			this.saveCurrentAnswer(mainTextarea);
-			this.saveSession();
-			if (this.currentStep < 9) { this.currentStep++; this.saveSession(); this.showView("question"); }
+			void this.saveSession();
+			if (this.currentStep < 9) { this.currentStep++; void this.saveSession(); this.showView("question"); }
 			else { this.showView("complete"); }
 		});
 
@@ -692,7 +698,7 @@ export class MuseWeaverPlotView extends ItemView {
 			this.hintTimer = setTimeout(() => {
 				const target = findHintTarget();
 				if (target) {
-					this.fireHint(qId, hintArea, target.label, target.explicit);
+					void this.fireHint(qId, hintArea, target.label, target.explicit);
 				}
 			}, 5000);
 		};
@@ -720,7 +726,7 @@ export class MuseWeaverPlotView extends ItemView {
 			}
 
 			this.approvalTimer = setTimeout(() => {
-				this.fireApproval(qId, approvalArea);
+				void this.fireApproval(qId, approvalArea);
 			}, 3000);
 		};
 
@@ -815,7 +821,7 @@ export class MuseWeaverPlotView extends ItemView {
 
 			// Click to regenerate
 			bubble.addEventListener("click", () => {
-				this.fireHint(qId, hintArea, fieldLabel, explicit);
+				void this.fireHint(qId, hintArea, fieldLabel, explicit);
 			});
 		}
 	}
@@ -842,14 +848,14 @@ export class MuseWeaverPlotView extends ItemView {
 		}, 500);
 
 		// Store interval so we can clear it when area is emptied
-		(area as any)._dotInterval = dotInterval;
+		dotIntervalMap.set(area, dotInterval);
 
 		area.addClass("visible");
 	}
 
 	private clearDotInterval(area: HTMLElement): void {
-		const interval = (area as any)._dotInterval;
-		if (interval) { clearInterval(interval); (area as any)._dotInterval = null; }
+		const interval = dotIntervalMap.get(area);
+		if (interval) { clearInterval(interval); dotIntervalMap.delete(area); }
 	}
 
 	private async fireApproval(qId: string, approvalArea: HTMLElement): Promise<void> {
@@ -923,7 +929,7 @@ export class MuseWeaverPlotView extends ItemView {
 		iconWrap.createSpan({ text: "\u2727", cls: "mwp-sparkle mwp-sparkle-2" });
 		iconWrap.createSpan({ text: "\u2726", cls: "mwp-sparkle mwp-sparkle-3" });
 
-		header.createEl("h3", { text: t.completeTitle });
+		header.createDiv({ text: t.completeTitle, cls: "mwp-complete-title" });
 		const title = this.plotTitle || t.untitled;
 		const flavorName = FLAVORS.find((f) => f.id === this.selectedFlavor)?.name || "";
 		header.createEl("p", { text: `\u300c${title}\u300d \u2014 ${flavorName}`, cls: "mwp-complete-meta" });
@@ -986,7 +992,7 @@ export class MuseWeaverPlotView extends ItemView {
 					const okBtn = btns.createEl("button", { text: t.updateBtn, cls: "mwp-btn-primary mwp-btn-sm" });
 					okBtn.addEventListener("click", () => {
 						openIndex = -1;
-						this.saveSession();
+						void this.saveSession();
 						renderItems();
 					});
 					const cancelBtn = btns.createEl("button", { text: t.cancelBtn, cls: "mwp-btn-secondary mwp-btn-sm" });
@@ -1019,7 +1025,7 @@ export class MuseWeaverPlotView extends ItemView {
 				this.renderDiagnosisResult(diagContent, this.diagnosisResult);
 			} else {
 				diagContent.createDiv({ cls: "mwp-diagnosis-loading", text: t.diagLoading(this.guideName) });
-				this.fireDiagnosis(diagContent);
+				void this.fireDiagnosis(diagContent);
 			}
 		}
 
@@ -1034,19 +1040,20 @@ export class MuseWeaverPlotView extends ItemView {
 		if (this.savedFilePath) {
 			const openBtn = actions.createEl("button", { text: t.openFile, cls: "mwp-btn-accent" });
 			openBtn.addEventListener("click", () => {
-				if (this.savedFilePath) this.app.workspace.openLinkText(this.savedFilePath, "", false);
+				if (this.savedFilePath) void this.app.workspace.openLinkText(this.savedFilePath, "", false);
 			});
 			actions.createDiv({ cls: "mwp-file-path", text: this.savedFilePath });
 		}
 
 		const closeBtn = actions.createEl("button", { text: t.close, cls: "mwp-btn-secondary mwp-btn-full" });
-		closeBtn.addEventListener("click", async () => {
+		closeBtn.addEventListener("click", () => {
 			if (!this.savedFilePath) {
 				this.renderUnsavedWarning(actions, closeBtn);
 			} else {
-				await this.clearSession();
-				this.resetState();
-				this.showView("start");
+				void this.clearSession().then(() => {
+					this.resetState();
+					this.showView("start");
+				});
 			}
 		});
 	}
@@ -1057,11 +1064,12 @@ export class MuseWeaverPlotView extends ItemView {
 		warn.createEl("p", { text: t.unsavedWarning, cls: "mwp-warn-text" });
 		const btns = warn.createDiv({ cls: "mwp-resume-btns" });
 		const yesBtn = btns.createEl("button", { text: t.unsavedYes, cls: "mwp-btn-secondary mwp-btn-half" });
-		yesBtn.addEventListener("click", async () => {
+		yesBtn.addEventListener("click", () => {
 			this.cancelApproval();
-			await this.clearSession();
-			this.resetState();
-			this.showView("start");
+			void this.clearSession().then(() => {
+				this.resetState();
+				this.showView("start");
+			});
 		});
 		const noBtn = btns.createEl("button", { text: t.unsavedNo, cls: "mwp-btn-accent mwp-btn-half" });
 		noBtn.addEventListener("click", () => {
@@ -1111,13 +1119,13 @@ export class MuseWeaverPlotView extends ItemView {
 			}
 		};
 
-		saveConfirm.addEventListener("click", async () => {
+		saveConfirm.addEventListener("click", () => {
 			const title = input.value || t.untitled;
 			// If titled (not untitled) and file exists, ask overwrite
 			if (input.value.trim() && plotFileExists(this.app, this.saveFolder, title)) {
 				this.renderOverwriteConfirm(dialog, title, doSave);
 			} else {
-				await doSave(false);
+				void doSave(false);
 			}
 		});
 
@@ -1142,9 +1150,9 @@ export class MuseWeaverPlotView extends ItemView {
 		dialog.createEl("p", { text: t.overwriteConfirm(title), cls: "mwp-warn-text" });
 		const btns = dialog.createDiv({ cls: "mwp-resume-btns" });
 		const overBtn = btns.createEl("button", { text: t.overwriteYes, cls: "mwp-btn-primary mwp-btn-half" });
-		overBtn.addEventListener("click", () => doSave(true));
+		overBtn.addEventListener("click", () => { void doSave(true); });
 		const newBtn = btns.createEl("button", { text: t.overwriteNo, cls: "mwp-btn-secondary mwp-btn-half" });
-		newBtn.addEventListener("click", () => doSave(false));
+		newBtn.addEventListener("click", () => { void doSave(false); });
 	}
 
 
@@ -1244,7 +1252,7 @@ export class MuseWeaverPlotView extends ItemView {
 			this.diagnosisResult = null;
 			container.empty();
 			container.createDiv({ cls: "mwp-diagnosis-loading", text: t.diagLoading(this.guideName) });
-			this.fireDiagnosis(container);
+			void this.fireDiagnosis(container);
 		});
 	}
 

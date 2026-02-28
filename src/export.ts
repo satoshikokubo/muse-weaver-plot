@@ -280,7 +280,10 @@ export async function saveAndOpenPlot(
 		// Overwrite existing file
 		filePath = exactPath;
 		try {
-			await app.vault.modify(app.vault.getAbstractFileByPath(exactPath) as TFile, md);
+			const existing = app.vault.getAbstractFileByPath(exactPath);
+			if (existing instanceof TFile) {
+				await app.vault.modify(existing, md);
+			}
 			new Notice(t.savedNotice + filePath);
 			await app.workspace.openLinkText(filePath, "", false);
 			return filePath;

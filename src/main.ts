@@ -16,7 +16,8 @@ export default class MuseWeaverPlotPlugin extends Plugin {
 	loadedPacks: LoadedPack[] = [];
 
 	async onload(): Promise<void> {
-		this.cachedData = (await this.loadData()) as PluginData | null;
+		const raw: unknown = await this.loadData();
+		this.cachedData = (raw != null && typeof raw === "object") ? raw as PluginData : null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, this.cachedData?.settings);
 
 		// Load external packs (unlocks flavors, merges overrides)
@@ -27,12 +28,12 @@ export default class MuseWeaverPlotPlugin extends Plugin {
 			(leaf) => new MuseWeaverPlotView(leaf, this),
 		);
 
-		this.addRibbonIcon("moon", "Muse Weaver Plot", () => this.activateView());
+		this.addRibbonIcon("moon", "Muse Weaver Plot", () => { void this.activateView(); });
 
 		this.addCommand({
-			id: "open-muse-weaver-plot",
-			name: "Open Muse Weaver Plot",
-			callback: () => this.activateView(),
+			id: "open-plot-panel",
+			name: "Open plot panel",
+			callback: () => { void this.activateView(); },
 		});
 
 		this.addSettingTab(new MuseWeaverPlotSettingTab(this.app, this));
